@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { quizService } from '@/services/api';
 
 // Quiz types
 type QuizQuestion = {
@@ -23,6 +24,8 @@ type QuizState = {
   timeRemaining: number;
   quizStarted: boolean;
   quizFinished: boolean;
+  isLoading: boolean;
+  error: string | null;
 };
 
 const Quiz = () => {
@@ -38,7 +41,9 @@ const Quiz = () => {
     isAnswered: false,
     timeRemaining: 20, // 20 seconds per question
     quizStarted: false,
-    quizFinished: false
+    quizFinished: false,
+    isLoading: false,
+    error: null
   });
 
   // Categories data (same as in Categories.tsx)
@@ -57,36 +62,28 @@ const Quiz = () => {
   
   const currentCategory = triviaCategories.find(cat => cat.id === Number(categoryId));
 
-  // Mock fetch questions from API
+  // Fetch questions from OpenTDB API using our service
   useEffect(() => {
     const fetchQuestions = async () => {
+      if (!categoryId) return;
+      
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock questions
-        const mockQuestions: QuizQuestion[] = Array(10).fill(null).map((_, index) => {
-          const correct = `Respuesta correcta ${index + 1}`;
-          const incorrectAnswers = [
-            `Opción incorrecta A${index + 1}`,
-            `Opción incorrecta B${index + 1}`,
-            `Opción incorrecta C${index + 1}`
-          ];
-          
-          // Shuffle all answers
-          const all_answers = [...incorrectAnswers, correct].sort(() => Math.random() - 0.5);
-          
-          return {
-            question: `Pregunta ${index + 1} sobre ${currentCategory?.name || 'este tema'}`,
-            correct_answer: correct,
-            incorrect_answers: incorrectAnswers,
-            all_answers
-          };
-        });
-        
-        setState(prev => ({ ...prev, questions: mockQuestions }));
+        const fetchedQuestions = await quizService.getQuestions(Number(categoryId));
+        setState(prev => ({ 
+          ...prev, 
+          questions: fetchedQuestions,
+          isLoading: false 
+        }));
       } catch (error) {
         console.error('Error fetching questions', error);
+        setState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          error: 'No pudimos cargar las preguntas. Por favor intenta de nuevo.' 
+        }));
+        
         toast({
           title: 'Error',
           description: 'No pudimos cargar las preguntas. Por favor intenta de nuevo.',
@@ -156,11 +153,22 @@ const Quiz = () => {
     setState(prev => ({ ...prev, isAnswered: true, score: newScore }));
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     const isLastQuestion = state.currentQuestionIndex === state.questions.length - 1;
     
     if (isLastQuestion) {
-      // End of quiz, navigate to results with score
+      // End of quiz, save result to backend
+      try {
+        await quizService.saveResult({
+          categoryId: Number(categoryId),
+          score: state.score,
+          totalQuestions: state.questions.length
+        });
+      } catch (error) {
+        console.error('Error saving quiz results:', error);
+      }
+      
+      // Navigate to results with score
       setState(prev => ({ ...prev, quizFinished: true }));
       navigate('/results', { 
         state: { 
@@ -183,8 +191,27 @@ const Quiz = () => {
     }));
   };
 
+  // Error state
+  if (state.error) {
+    return (
+      <Layout title={currentCategory?.name || 'Trivia'} showBackButton>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <p className="text-xl font-semibold text-entremente-dark dark:text-white mb-2">Error</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{state.error}</p>
+          <Button 
+            onClick={() => navigate('/categories')}
+            className="entremente-button"
+          >
+            Volver a Categorías
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+  
   // Loading state
-  if (state.questions.length === 0) {
+  if (state.isLoading || state.questions.length === 0) {
     return (
       <Layout title={currentCategory?.name || 'Trivia'} showBackButton>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">

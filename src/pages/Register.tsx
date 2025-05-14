@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import Layout from '../components/Layout';
 import { useToast } from "@/components/ui/use-toast";
+import { authService } from '@/services/api';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -40,22 +41,15 @@ const Register = () => {
     setLoading(true);
     
     try {
-      // In a real app, this would be an API call to your backend
-      // For now, we'll mock a successful registration
-      const mockResponse = {
-        user: {
-          id: 1,
-          username: username,
-          nombre_completo: fullName,
-        },
-        token: 'mock-jwt-token'
-      };
-      
-      // Add a small delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Conectar con el backend real
+      const response = await authService.register({
+        username,
+        password,
+        fullName
+      });
       
       // Store auth data
-      login(mockResponse.user, mockResponse.token);
+      login(response.user, response.token);
       
       toast({
         title: "¡Registro exitoso!",

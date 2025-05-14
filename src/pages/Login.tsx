@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import Layout from '../components/Layout';
 import { useToast } from "@/components/ui/use-toast";
+import { authService } from '@/services/api';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -28,22 +29,14 @@ const Login = () => {
     setLoading(true);
     
     try {
-      // In a real app, this would be an API call to your backend
-      // For now, we'll mock a successful login with a demo user and token
-      const mockResponse = {
-        user: {
-          id: 1,
-          username: username,
-          nombre_completo: 'Usuario Demo',
-        },
-        token: 'mock-jwt-token'
-      };
-      
-      // Add a small delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Conectar con el backend real
+      const response = await authService.login({
+        username,
+        password
+      });
       
       // Store auth data
-      login(mockResponse.user, mockResponse.token);
+      login(response.user, response.token);
       
       toast({
         title: "¡Bienvenido!",

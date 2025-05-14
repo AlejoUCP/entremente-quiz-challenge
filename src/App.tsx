@@ -16,21 +16,6 @@ import Ranking from "./pages/Ranking";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// Mock the AsyncStorage from React Native for browser environment
-const AsyncStorage = {
-  getItem: (key: string) => {
-    return Promise.resolve(localStorage.getItem(key));
-  },
-  setItem: (key: string, value: string) => {
-    localStorage.setItem(key, value);
-    return Promise.resolve();
-  },
-  removeItem: (key: string) => {
-    localStorage.removeItem(key);
-    return Promise.resolve();
-  }
-};
-
 // Create auth context
 export const AuthContext = createContext<{
   isLoggedIn: boolean;
@@ -58,8 +43,8 @@ const App = () => {
     // Check if user is logged in
     const checkLoginStatus = async () => {
       try {
-        const storedToken = await AsyncStorage.getItem('token');
-        const storedUser = await AsyncStorage.getItem('user');
+        const storedToken = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
         
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -78,8 +63,8 @@ const App = () => {
 
   const login = async (userData: any, newToken: string) => {
     try {
-      await AsyncStorage.setItem('token', newToken);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(userData));
       setToken(newToken);
       setUser(userData);
       setIsLoggedIn(true);
@@ -90,8 +75,8 @@ const App = () => {
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setToken(null);
       setUser(null);
       setIsLoggedIn(false);

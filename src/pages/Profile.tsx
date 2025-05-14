@@ -3,47 +3,45 @@ import { useContext, useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { AuthContext } from '../App';
 import { useToast } from "@/components/ui/use-toast";
+import { userService, authService } from '@/services/api';
+
+type UserStats = {
+  totalGames: number;
+  averageScore: number;
+  highestScore: number;
+  favoriteCategory: string;
+};
+
+type RecentGame = {
+  id: number;
+  date: string;
+  category: string;
+  score: number;
+  total: number;
+};
 
 const Profile = () => {
   const { user, logout } = useContext(AuthContext);
   const { toast } = useToast();
-  const [userStats, setUserStats] = useState({
+  const [userStats, setUserStats] = useState<UserStats>({
     totalGames: 0,
     averageScore: 0,
     highestScore: 0,
     favoriteCategory: '',
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [recentGames, setRecentGames] = useState<Array<{
-    id: number,
-    date: string,
-    category: string,
-    score: number,
-    total: number
-  }>>([]);
+  const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Obtener el perfil del usuario
+        const profileData = await userService.getProfile();
+        setUserStats(profileData.stats);
         
-        // Mock user statistics
-        setUserStats({
-          totalGames: 15,
-          averageScore: 7.3,
-          highestScore: 10,
-          favoriteCategory: 'Ciencias',
-        });
-        
-        // Mock recent games
-        setRecentGames([
-          { id: 5, date: '2023-11-28', category: 'Historia', score: 8, total: 10 },
-          { id: 4, date: '2023-11-27', category: 'Ciencias', score: 10, total: 10 },
-          { id: 3, date: '2023-11-25', category: 'Música', score: 6, total: 10 },
-          { id: 2, date: '2023-11-20', category: 'Geografía', score: 7, total: 10 },
-          { id: 1, date: '2023-11-18', category: 'Deportes', score: 5, total: 10 },
-        ]);
+        // Obtener partidas recientes
+        const gamesData = await userService.getRecentGames();
+        setRecentGames(gamesData);
         
         setIsLoading(false);
       } catch (error) {
@@ -53,18 +51,24 @@ const Profile = () => {
           description: 'No pudimos cargar tus datos. Por favor intenta de nuevo.',
           variant: 'destructive',
         });
+        setIsLoading(false);
       }
     };
     
     fetchUserData();
   }, [toast]);
 
-  const handleLogout = () => {
-    logout();
-    toast({
-      title: 'Sesión cerrada',
-      description: 'Has cerrado sesión correctamente',
-    });
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      logout();
+      toast({
+        title: 'Sesión cerrada',
+        description: 'Has cerrado sesión correctamente',
+      });
+    } catch (error) {
+      console.error('Error during logout', error);
+    }
   };
   
   if (isLoading) {
